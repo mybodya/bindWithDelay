@@ -1,25 +1,43 @@
-/* 
-bindWithDelay jQuery plugin
-Author: Brian Grinstead
-MIT license: http://www.opensource.org/licenses/mit-license.php
+/*
 
-http://github.com/bgrins/bindWithDelay
-http://briangrinstead.com/files/bindWithDelay
+the previous(forked) script had a strong bug. It did not work as jquery $.bind 
+because inside the event function "this" was not a DOM element, but a jquery array
 
-Usage: 
-	See http://api.jquery.com/bind/
-	.bindWithDelay( eventType, [ eventData ], handler(eventObject), timeout, throttle )
+here's *simplified* version working for me and tested. I've rewritten it much
 
-Examples:
-	$("#foo").bindWithDelay("click", function(e) { }, 100);
-	$(window).bindWithDelay("resize", { optional: "eventData" }, callback, 1000);
-	$(window).bindWithDelay("resize", callback, 1000, true);
+
+(function($) {
+$.fn.bindWithDelay = function( type, fun, timeout, throttle ) {
+	var wait;
+	
+	function cb() {
+		var self = this
+		
+		function throttler() {
+			wait = null;
+			$(self).each(fun);
+		};
+	
+		if (!throttle && wait) { clearTimeout(wait); }
+		if (!throttle || !wait) { wait = setTimeout(throttler, timeout); }
+	}
+	
+	return this.bind(type, cb);
+}
+})(jQuery);
+
+
+
+
+and here's the suggested fix. please test it yourself. 
+PS: I don't know how to work with $.extend()
+
+contact me mybodya@gmail.com
 */
 
 (function($) {
 $.fn.bindWithDelay = function( type, data, fn, timeout, throttle ) {
-	var wait = null;
-	var that = this;
+	var wait;
 	
 	if ( $.isFunction( data ) ) {
 		throttle = timeout;
@@ -29,13 +47,15 @@ $.fn.bindWithDelay = function( type, data, fn, timeout, throttle ) {
 	}
 	
 	function cb() {
-		var e = $.extend(true, { }, arguments[0]);
-		var throttler = function() {
+//		var e = $.extend(true, { }, arguments[0]);
+		var that = this;
+
+		function throttler() {
 			wait = null;
-			fn.apply(that, [e]);
+			that.each(fn);
 		};
 		
-		if (!throttle) { clearTimeout(wait); }
+		if (!throttle && wait) { clearTimeout(wait); }
 		if (!throttle || !wait) { wait = setTimeout(throttler, timeout); }
 	}
 	
